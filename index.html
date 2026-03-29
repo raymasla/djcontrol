@@ -226,10 +226,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <div id="play-upload-area">
       <div style="max-width:540px;margin:0 auto;">
         <div class="upload-zone" id="playUploadZone">
-          <input type="file" multiple accept="audio/*" onchange="handlePlayFiles(this.files)">
+          <input type="file" multiple accept="audio/*,video/*" onchange="handlePlayFiles(this.files)">
           <div class="upload-icon">📂</div>
-          <div class="upload-title">上傳音檔以開始播放</div>
-          <div class="upload-hint">可拖曳至頁面任何位置 · MP3 WAV OGG AAC FLAC M4A</div>
+          <div class="upload-title">上傳音檔或影片以開始播放</div>
+          <div class="upload-hint">音檔：MP3 WAV OGG AAC FLAC M4A</div>
+          <div class="upload-hint" style="margin-top:4px;">影片（僅讀取聲音）：MP4 MKV AVI MOV WEBM</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px;" id="playUploadList"></div>
         <div style="margin-top:14px;text-align:center;display:none;" id="playStartRow">
@@ -407,7 +408,9 @@ function fileIcon(n) {
   const e = n.split('.').pop().toLowerCase();
   if (e === 'mp3') return '🎵'; if (e === 'wav') return '🔊';
   if (e === 'ogg') return '🎶'; if (['aac', 'm4a'].includes(e)) return '🎧';
-  if (e === 'flac') return '💿'; return '🎵';
+  if (e === 'flac') return '💿';
+  if (['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'm4v'].includes(e)) return '🎬';
+  return '🎵';
 }
 
 function drawWF(canvas, buffer, c1 = '#1e90ff', c2 = '#00d4ff') {
@@ -496,10 +499,10 @@ let pPlaylist = []; // { trackIdx, label }
 function handlePlayFiles(fl) {
   Array.from(fl).forEach(f => {
     if (pFiles.find(x => x.name === f.name)) { toast(`${f.name} 已存在`, '⚠'); return; }
-    if (!f.type.startsWith('audio/') && !f.name.match(/\.(mp3|wav|ogg|aac|flac|m4a|opus)$/i)) {
-      toast(`${f.name} 不是音檔`, '⚠'); return;
-    }
-    pFiles.push({ file: f, name: f.name, buffer: null, loaded: false });
+    const isAudio = f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|ogg|aac|flac|m4a|opus)$/i);
+    const isVideo = f.type.startsWith('video/') || f.name.match(/\.(mp4|mkv|avi|mov|webm|wmv|flv|m4v)$/i);
+    if (!isAudio && !isVideo) { toast(`${f.name} 不支援此格式`, '⚠'); return; }
+    pFiles.push({ file: f, name: f.name, buffer: null, loaded: false, isVideo: !!isVideo });
   });
   pFiles.sort((a, b) => a.name.localeCompare(b.name));
   renderPlayUploadList();
@@ -546,6 +549,36 @@ function resetPlayConsole() {
 // ── Load buffer ──
 function loadPBuf(idx) {
   const f = pFiles[idx];
+  if (f.isVideo) {
+    // For video files: extract audio via MediaElementSource
+    const url = URL.createObjectURL(f.file);
+    const vid = document.createElement('video');
+    vid.src = url; vid.preload = 'auto'; vid.muted = true;
+    vid.addEventListener('loadedmetadata', () => {
+      // Use OfflineAudioContext to decode audio from video via fetch/ArrayBuffer
+      fetch(url).then(r => r.arrayBuffer()).then(ab => {
+        audioCtx.decodeAudioData(ab, buf => {
+          f.buffer = buf; f.loaded = true;
+          URL.revokeObjectURL(url);
+          const card = document.getElementById(`ptc-${idx}`);
+          if (card) {
+            const tag = card.querySelector('.pt-tag');
+            if (tag) { tag.className = 'tag tag-green'; tag.textContent = '就緒'; }
+            const tEl = card.querySelector('.ptc-time');
+            if (tEl) tEl.textContent = fmtDur(0) + ' / ' + fmtDur(buf.duration);
+            const wf = document.getElementById(`pt-wf-${idx}`);
+            if (wf) setTimeout(() => drawWF(wf, buf), 50);
+          }
+          renderPlaylist();
+        }, () => {
+          URL.revokeObjectURL(url);
+          toast(`${f.name} 無法擷取音訊`, '⚠');
+        });
+      });
+    });
+    vid.load();
+    return;
+  }
   const reader = new FileReader();
   reader.onload = e => {
     audioCtx.decodeAudioData(e.target.result.slice(0), buf => {
@@ -574,7 +607,7 @@ function buildPlayTracks() {
     d.innerHTML = `
       <div class="play-track-header">
         <span style="font-size:18px;">${fileIcon(f.name)}</span>
-        <span class="ptc-name">${f.name}</span>
+        <span class="ptc-name">${f.name}${f.isVideo ? ' <span style="font-size:10px;padding:1px 6px;border-radius:3px;background:rgba(168,85,247,0.15);color:#a855f7;border:1px solid rgba(168,85,247,0.3);font-family:\'JetBrains Mono\',monospace;vertical-align:middle;">影片音訊</span>' : ''}</span>
         <span class="tag tag-cyan pt-tag">載入中</span>
         <span class="ptc-time">—</span>
       </div>
