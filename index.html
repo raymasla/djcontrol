@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>暗影工具箱</title>
+<title>音樂工具箱</title>
+<link rel="icon" href="icon1.png" type="image/png">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -182,28 +183,30 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 <!-- HEADER -->
 <div class="header">
-  <div class="header-logo">Σ</div>
-  <div class="header-title">DARK TOOLS</div>
-  <div class="header-sub">v3.1 · SHADOW SUITE</div>
+  <div class="header-logo" style="width: auto; height: auto; padding: 4px;">
+    <img src="icon.png" alt="logo" style="display: block; max-height: 36px;">
+  </div>
+  <div class="header-title">簡單音樂工具</div>
+  <div class="header-sub">工具by 阿叡</div>
 </div>
 
 <!-- ===== HOME ===== -->
 <div class="page active" id="home">
   <div class="home-hero">
-    <h1>SHADOW<br>TOOLBOX</h1>
-    <p>// SELECT YOUR TOOL TO BEGIN //</p>
+    <h1>音樂DJ撥放控制<br>&簡單編輯</h1>
+    <p>// 選擇以下工具吧！ //</p>
   </div>
   <div class="tools-grid">
     <div class="tool-card" onclick="goto('dj')">
-      <div class="tool-icon">🎛</div>
-      <div class="tool-label">TOOL · 01</div>
+      <div class="tool-icon">🎵</div>
+      <div class="tool-label">工具 · 01</div>
       <div class="tool-name">DJ 控制台</div>
       <div class="tool-desc">上傳音檔、即時同步控制所有音軌播放、自訂播放順序，支援全頁面拖曳上傳。</div>
       <div class="tool-arrow">→</div>
     </div>
     <div class="tool-card" onclick="goto('audio')">
-      <div class="tool-icon">🎵</div>
-      <div class="tool-label">TOOL · 02</div>
+      <div class="tool-icon">✂️</div>
+      <div class="tool-label">工具 · 02</div>
       <div class="tool-name">簡易音檔編輯</div>
       <div class="tool-desc">上傳音檔、即時播放、調整速度、剪接下載，支援多檔同時操作。</div>
       <div class="tool-arrow">→</div>
@@ -241,7 +244,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <!-- Master bar -->
       <div class="master-bar">
         <div style="min-width:0;">
-          <div class="master-title">MASTER CONTROL</div>
+          <div class="master-title">主控制</div>
           <div style="font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-top:3px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="masterStatus">就緒</div>
         </div>
         <!-- Spectrum visualizer -->
