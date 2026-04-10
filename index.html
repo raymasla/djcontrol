@@ -79,6 +79,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .waveform-wrap{position:relative;height:64px;background:var(--bg-panel);border-radius:8px;overflow:hidden;cursor:pointer;border:1px solid var(--border-dim);}
 .waveform-canvas{width:100%;height:100%;display:block;}
 .waveform-playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--accent-cyan);pointer-events:none;box-shadow:0 0 5px var(--accent-cyan);}
+.waveform-hover{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,0.25);pointer-events:none;display:none;}
+.waveform-tooltip{position:absolute;top:4px;background:rgba(6,14,26,0.88);border:1px solid var(--border-mid);border-radius:4px;padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent-cyan);pointer-events:none;display:none;white-space:nowrap;z-index:10;}
 
 /* ── UPLOAD ZONE ── */
 .upload-zone{border:2px dashed var(--border-mid);border-radius:14px;padding:40px 28px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(10,22,40,0.5);position:relative;}
@@ -981,6 +983,8 @@ function addAudioCard(i, f) {
     <div class="waveform-wrap" id="at-wfw-${i}" style="margin-bottom:10px;">
       <canvas class="waveform-canvas" id="at-wf-${i}"></canvas>
       <div class="waveform-playhead" id="at-ph-${i}" style="left:0;display:none;"></div>
+      <div class="waveform-hover" id="at-hv-${i}"></div>
+      <div class="waveform-tooltip" id="at-tt-${i}"></div>
     </div>
     <div class="play-track-controls">
       <button class="btn sm primary" id="at-pb-${i}" onclick="toggleAT(${i})">▶ 播放</button>
@@ -1002,10 +1006,40 @@ function addAudioCard(i, f) {
   layout.appendChild(d);
   setTimeout(() => {
     const wrap = document.getElementById(`at-wfw-${i}`);
+    const hv   = document.getElementById(`at-hv-${i}`);
+    const tt   = document.getElementById(`at-tt-${i}`);
+
+    wrap.addEventListener('mousemove', e => {
+      if (!aTracks[i]?.buffer) return;
+      const rect = wrap.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const r = Math.max(0, Math.min(1, x / wrap.offsetWidth));
+      const t = r * aTracks[i].buffer.duration;
+      // hover line
+      hv.style.left = x + 'px';
+      hv.style.display = '';
+      // tooltip: keep within bounds
+      tt.textContent = fmtDur(t);
+      const ttW = tt.offsetWidth || 50;
+      tt.style.left = Math.min(x + 6, wrap.offsetWidth - ttW - 4) + 'px';
+      tt.style.display = '';
+    });
+
+    wrap.addEventListener('mouseleave', () => {
+      if (hv) hv.style.display = 'none';
+      if (tt) tt.style.display = 'none';
+    });
+
     wrap.addEventListener('click', e => {
       if (!aTracks[i]?.buffer) return;
       const r = (e.clientX - wrap.getBoundingClientRect().left) / wrap.offsetWidth;
-      seekAT(i, r * aTracks[i].buffer.duration);
+      const seekTime = r * aTracks[i].buffer.duration;
+      // Show playhead immediately even if paused
+      const ph = document.getElementById(`at-ph-${i}`);
+      if (ph) { ph.style.left = (r * wrap.offsetWidth) + 'px'; ph.style.display = ''; }
+      const tEl = document.getElementById(`at-t-${i}`);
+      if (tEl) tEl.textContent = fmtDur(seekTime) + ' / ' + fmtDur(aTracks[i].buffer.duration);
+      seekAT(i, seekTime);
     });
   }, 80);
 }
@@ -1061,6 +1095,15 @@ function pauseAT(i) {
   const el = (audioCtx.currentTime - st.startedAt) * st.speed;
   try { st.source?.stop(); } catch (e) {}
   st.source = null; st.offset = el; st.playing = false;
+  // Keep playhead visible at paused position
+  const wrap = document.getElementById(`at-wfw-${i}`);
+  const ph = document.getElementById(`at-ph-${i}`);
+  if (ph && wrap && aTracks[i]?.buffer) {
+    ph.style.left = (Math.min(1, el / aTracks[i].buffer.duration) * wrap.offsetWidth) + 'px';
+    ph.style.display = '';
+  }
+  const tEl = document.getElementById(`at-t-${i}`);
+  if (tEl && aTracks[i]?.buffer) tEl.textContent = fmtDur(el) + ' / ' + fmtDur(aTracks[i].buffer.duration);
   updABtn(i); setStatus('暫停');
 }
 
